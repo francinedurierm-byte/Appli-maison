@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ma maison organisée</title>
+
+  <style>
+    :root {
+      --green: #287a55;
+      --green-light: #eaf5ee;
+      --cream: #faf8f2;
+      --ink: #23342b;
+      --muted: #68766e;
+      --border: #e3e9e3;
+      --white: #fff;
+      --red: #b6463a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--cream);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    header {
+      padding: 26px 18px;
+      color: white;
+      background: var(--green);
+    }
+
+    header h1 { margin: 0 0 5px; }
+    header p { margin: 0; opacity: .9; }
+
+    main {
+      max-width: 1050px;
+      margin: 22px auto;
+      padding: 0 14px 40px;
+    }
+
+    .tabs, .toolbar, .row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .tabs { margin-bottom: 18px; }
+
+    button, input, select, textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      border-radius: 9px;
+      padding: 10px 13px;
+      background: var(--green);
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover { filter: brightness(.95); }
+
+    button.secondary {
+      color: var(--ink);
+      background: white;
+      border: 1px solid var(--border);
+    }
+
+    button.active { background: #17583b; }
+
+    button.delete { background: var(--red); }
+
+    .card {
+      margin: 12px 0;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      background: var(--white);
+    }
+
+    h2 { margin-top: 0; }
+    h3 { margin-bottom: 8px; }
+
+    label {
+      display: block;
+      margin: 8px 0 4px;
+      font-weight: 600;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      min-height: 42px;
+      padding: 9px 10px;
+      color: var(--ink);
+      background: white;
+      border: 1px solid #cfd9d0;
+      border-radius: 8px;
+    }
+
+    textarea { min-height: 95px; resize: vertical; }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      align-items: end;
+    }
+
+    .meal-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 12px;
+    }
+
+    .meal-day {
+      padding: 13px;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      background: white;
+    }
+
+    .meal-slot { margin-top: 10px; }
+    .meal-slot label { font-size: .9rem; }
+
+    .muted { color: var(--muted); }
+    .hidden { display: none; }
+
+    .task {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .task:last-child { border-bottom: 0; }
+    .task.done .task-name { text-decoration: line-through; opacity: .6; }
+
+    .task-info { flex: 1; }
+    .task-name { font-weight: 650; }
+    .tag {
+      display: inline-block;
+      margin: 4px 5px 0 0;
+      padding: 3px 8px;
+      border-radius: 20px;
+      background: var(--green-light);
+      font-size: .82rem;
+    }
+
+    .shopping-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .shopping-item input { width: 20px; min-height: 20px; }
+    .shopping-item.checked span { text-decoration: line-through; opacity: .55; }
+
+    .calories {
+      padding: 13px;
+      border-radius: 10px;
+      background: var(--green-light);
+      font-weight: 700;
+    }
+
+    @media (max-width: 520px) {
+      header { padding: 22px 15px; }
+      .task { align-items: flex-start; }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>🏡 Ma maison organisée</h1>
+    <p>Planifie tes repas, tes courses et les tâches de la maison.</p>
+  </header>
+
+  <main>
+    <nav class="tabs" aria-label="Navigation">
+      <button class="tab active" data-tab="meals">🍽️ Repas</button>
+      <button class="tab secondary" data-tab="shopping">🛒 Courses</button>
+      <button class="tab secondary" data-tab="recipes">📖 Recettes</button>
+      <button class="tab secondary" data-tab="tasks">🧹 Tâches</button>
+    </nav>
+
+    <section id="meals">
+      <h2>Planning de la semaine</h2>
+      <div id="weekCalories" class="calories"></div>
+      <div id="mealPlan" class="meal-grid"></div>
+    </section>
+
+    <section id="shopping" class="hidden">
+      <h2>Liste de courses</h2>
+      <p class="muted">La liste est créée à partir des recettes prévues dans ton planning.</p>
+      <button id="clearChecks" class="secondary">Décocher tous les articles</button>
+      <div id="shoppingList" class="card"></div>
+    </section>
+
+    <section id="recipes" class="hidden">
+      <h2>Mes recettes</h2>
+      <form id="recipeForm" class="card">
+        <h3>Ajouter une recette</h3>
+        <div class="form-grid">
+          <div>
+            <label for="recipeName">Nom</label>
+            <input id="recipeName" required placeholder="Ex. Salade de pâtes">
+          </div>
+          <div>
+            <label for="recipeCalories">Calories par portion</label>
+            <input id="recipeCalories" type="number" min="0" required placeholder="Ex. 450">
+          </div>
+        </div>
+        <label for="recipeIngredients">Ingrédients (un par ligne)</label>
+        <textarea id="recipeIngredients" required placeholder="Ex.&#10;Pâtes, 200 g&#10;Tomates, 2&#10;Feta, 100 g"></textarea>
+        <p class="muted">Écris chaque ingrédient sous la forme : nom, quantité.</p>
+        <button type="submit">Ajouter la recette</button>
+      </form>
+      <div id="recipeList"></div>
+    </section>
+
+    <section id="tasks" class="hidden">
+      <h2>Tâches de la maison</h2>
+
+      <form id="taskForm" class="card">
+        <h3>Ajouter une tâche</h3>
+        <div class="form-grid">
+          <div>
+            <label for="taskName">Tâche</label>
+            <input id="taskName" required placeholder="Ex. Nettoyer les vitres">
+          </div>
+          <div>
+            <label for="taskRoom">Pièce</label>
+            <select id="taskRoom">
+              <option>Salon</option>
+              <option>Cuisine</option>
+              <option>Chambre</option>
+              <option>Salle de bain</option>
+              <option>Entrée</option>
+              <option>Buanderie</option>
+              <option>Jardin</option>
+              <option>Autre</option>
+            </select>
+          </div>
+          <div>
+            <label for="taskDue">Échéance</label>
+            <input id="taskDue" type="date">
+          </div>
+          <div>
+            <label for="taskPriority">Priorité</label>
+            <select id="taskPriority">
+              <option>Normale</option>
+              <option>Haute</option>
+              <option>Basse</option>
+            </select>
+          </div>
+        </div>
+        <p><button type="submit">Ajouter la tâche</button></p>
+      </form>
+
+      <div class="toolbar card">
+        <label for="roomFilter">Pièce :</label>
+        <select id="roomFilter" style="width:auto">
+          <option value="Toutes">Toutes</option>
+          <option>Salon</option>
+          <option>Cuisine</option>
+          <option>Chambre</option>
+          <option>Salle de bain</option>
+          <option>Entrée</option>
+          <option>Buanderie</option>
+          <option>Jardin</option>
+          <option>Autre</option>
+        </select>
+
+        <label for="statusFilter">État :</label>
+        <select id="statusFilter" style="width:auto">
+          <option value="À faire">À faire</option>
+          <option value="Terminées">Terminées</option>
+          <option value="Toutes">Toutes</option>
+        </select>
+
+        <button id="roomView" class="secondary" type="button">Vue par pièce</button>
+        <button id="listView" class="secondary" type="button">Vue en liste</button>
+      </div>
+
+      <div id="taskList"></div>
+    </section>
+  </main>
+
+  <script>
+    const defaultRecipes = [
+      {
+        id: "r1", name: "Omelette aux légumes", calories: 320,
+        ingredients: ["Œufs, 3", "Poivron, 1", "Oignon, 1", "Fromage râpé, 30 g"]
+      },
+      {
+        id: "r2", name: "Salade de poulet", calories: 420,
+        ingredients: ["Poulet, 150 g", "Salade, 1", "Tomates, 2", "Concombre, 1"]
+      },
+      {
+        id: "r3", name: "Pâtes à la tomate", calories: 510,
+        ingredients: ["Pâtes, 100 g", "Tomates, 2", "Ail, 1 gousse", "Parmesan, 20 g"]
+      },
+      {
+        id: "r4", name: "Soupe de légumes", calories: 280,
+        ingredients: ["Carottes, 2", "Pommes de terre, 2", "Poireau, 1", "Bouillon, 1 cube"]
+      },
+      {
+        id: "r5", name: "Riz au saumon", calories: 560,
+        ingredients: ["Riz, 100 g", "Saumon, 150 g", "Citron, 1", "Crème, 2 cuillères"]
+      },
+      {
+        id: "r6", name: "Yaourt et fruits", calories: 180,
+        ingredients: ["Yaourt, 1", "Pomme, 1", "Banane, 1"]
+      }
+    ];
+
+    const days = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+    const mealTypes = ["Petit-déjeuner", "Déjeuner", "Dîner"];
+
+    function load(key, fallback) {
+      try {
+        const value = localStorage.getItem(key);
+        return value ? JSON.parse(value) : fallback;
+      } catch {
+        return fallback;
+      }
+    }
+
+    let recipes = load("maison_recipes", defaultRecipes);
+    let plan = load("maison_plan", {});
+    let tasks = load("maison_tasks", []);
+    let checked = load("maison_checked", {});
+    let taskView = "room";
+
+    function save() {
+      localStorage.setItem("maison_recipes", JSON.stringify(recipes));
+      localStorage.setItem("maison_plan", JSON.stringify(plan));
+      localStorage.setItem("maison_tasks", JSON.stringify(tasks));
+      localStorage.setItem("maison_checked", JSON.stringify(checked));
+    }
+
+    function esc(value) {
+      return String(value).replace(/[&<>"']/g, char => ({
+        "&": "&", "<": "<", ">": ">", '"': """, "'": "'"
+      }[char]));
+    }
+
+    function mealKey(day, type) {
+      return day + "|" + type;
+    }
+
+    function renderMeals() {
+      const container = document.getElementById("mealPlan");
+      const options = recipes.map(recipe =>
+        `<option value="${esc(recipe.id)}">${esc(recipe.name)}</option>`
+      ).join("");
+
+      container.innerHTML = days.map(day => `
+        <div class="meal-day">
+          <h3>${day}</h3>
+          ${mealTypes.map(type => {
+            const key = mealKey(day, type);
+            return `
+              <div class="meal-slot">
+                <label for="${esc(key)}">${type}</label>
+                <select class="meal-select" id="${esc(key)}" data-key="${esc(key)}">
+                  <option value="">— Choisir une recette —</option>
+                  ${options}
+                </select>
+              </div>`;
+          }).join("")}
+        </div>
+      `).join("");
+
+      document.querySelectorAll(".meal-select").forEach(select => {
+        select.value = plan[select.dataset.key] || "";
+        select.addEventListener("change", () => {
+          if (select.value) plan[select.dataset.key] = select.value;
+          else delete plan[select.dataset.key];
+          save();
+          renderCalories();
+          renderShopping();
+        });
+      });
+
+      renderCalories();
+    }
+
+    function renderCalories() {
+      let total = 0;
+      let count = 0;
+
+      Object.values(plan).forEach(id => {
+        const recipe = recipes.find(item => item.id === id);
+        if (recipe) {
+          total += Number(recipe.calories) || 0;
+          count++;
+        }
+      });
+
+      const average = count ? Math.round(total / count) : 0;
+      document.getElementById("weekCalories").textContent =
+        `Calories prévues : ${total} kcal au total pour la semaine` +
+        (count ? ` · moyenne de ${average} kcal par repas` : "");
+    }
+
+    function renderShopping() {
+      const items = {};
+
+      Object.values(plan).forEach(id => {
+        const recipe = recipes.find(item => item.id === id);
+        if (!recipe) return;
+
+        recipe.ingredients.forEach(line => {
+          const name = line.trim();
+          if (name) items[name] = (items[name] || 0) + 1;
+        });
+      });
+
+      const list = document.getElementById("shoppingList");
+      const names = Object.keys(items).sort((a, b) => a.localeCompare(b, "fr"));
+
+      if (!names.length) {
+        list.innerHTML = '<p class="muted">Choisis des recettes dans ton planning pour créer ta liste de courses.</p>';
+        return;
+      }
+
+      list.innerHTML = names.map(name => {
+        const id = "item_" + name;
+        return `
+          <label class="shopping-item ${checked[name] ? "checked" : ""}" for="${esc(id)}">
+            <input type="checkbox" id="${esc(id)}" data-item="${esc(name)}" ${checked[name] ? "checked" : ""}>
+            <span>${esc(name)}${items[name] > 1 ? ` <span class="muted">(prévu ${items[name]} fois)</span>` : ""}</span>
+          </label>`;
+      }).join("");
+
+      list.querySelectorAll('input[type="checkbox"]').forEach(box => {
+        box.addEventListener("change", () => {
+          checked[box.dataset.item] = box.checked;
+          save();
+          renderShopping();
+        });
+      });
+    }
+
+    function renderRecipes() {
+      const list = document.getElementById("recipeList");
+
+      if (!recipes.length) {
+        list.innerHTML = '<p class="muted">Aucune recette pour le moment.</p>';
+        return;
+      }
+
+      list.innerHTML = recipes.map(recipe => `
+        <article class="card">
+          <div class="row" style="justify-content:space-between">
+            <div>
+              <h3>${esc(recipe.name)}</h3>
+              <div class="muted">${Number(recipe.calories) || 0} kcal par portion</div>
+            </div>
+            ${recipe.id.startsWith("r") ? "" :
+              `<button class="delete" data-delete-recipe="${esc(recipe.id)}">Supprimer</button>`}
+          </div>
+          <p><strong>Ingrédients :</strong> ${recipe.ingredients.map(esc).join(" · ")}</p>
+        </article>
+      `).join("");
+
+      list.querySelectorAll("[data-delete-recipe]").forEach(button => {
+        button.addEventListener("click", () => {
+          const id = button.dataset.deleteRecipe;
+          recipes = recipes.filter(recipe => recipe.id !== id);
+          Object.keys(plan).forEach(key => {
+            if (plan[key] === id) delete plan[key];
+          });
+          save();
+          renderAll();
+        });
+      });
+    }
+
+    document.getElementById("recipeForm").addEventListener("submit", event => {
+      event.preventDefault();
+
+      const name = document.getElementById("recipeName").value.trim();
+      const calories = Number(document.getElementById("recipeCalories").value);
+      const ingredients = document.getElementById("recipeIngredients").value
+        .split("\n")
+        .map(line => line.trim())
+        .filter(Boolean);
+
+      recipes.push({
+        id: "custom_" + Date.now(),
+        name,
+        calories,
+        ingredients
+      });
+
+      save();
+      event.target.reset();
+      renderAll();
+    });
+
+    document.getElementById("taskForm").addEventListener("submit", event => {
+      event.preventDefault();
+
+      tasks.push({
+        id: Date.now().toString(),
+        name: document.getElementById("taskName").value.trim(),
+        room: document.getElementById("taskRoom").value,
+        due: document.getElementById("taskDue").value,
+        priority: document.getElementById("taskPriority").value,
+        done: false
+      });
+
+      save();
+      event.target.reset();
+      renderTasks();
+    });
+
+    function renderTasks() {
+      const roomFilter = document.getElementById("roomFilter").value;
+      const statusFilter = document.getElementById("statusFilter").value;
+      let filtered = tasks.filter(task => {
+        const roomOK = roomFilter === "Toutes" || task.room === roomFilter;
+        const statusOK = statusFilter === "Toutes" ||
+          (statusFilter === "À faire" && !task.done) ||
+          (statusFilter === "Terminées" && task.done);
+        return roomOK && statusOK;
+      });
+
+      filtered.sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999"));
+
+      const container = document.getElementById("taskList");
+      if (!filtered.length) {
+        container.innerHTML = '<div class="card muted">Aucune tâche à afficher.</div>';
+        return;
+      }
+
+      const renderTask = task => `
+        <div class="task ${task.done ? "done" : ""}">
+          <input type="checkbox" aria-label="Marquer comme terminée"
+            data-toggle-task="${esc(task.id)}" ${task.done ? "checked" : ""}
+            style="width:20px;min-height:20px">
+          <div class="task-info">
+            <div class="task-name">${esc(task.name)}</div>
+            <span class="tag">${esc(task.room)}</span>
+            <span class="tag">Priorité : ${esc(task.priority)}</span>
+            ${task.due ? `<span class="tag">Échéance : ${esc(task.due)}</span>` : ""}
+          </div>
+          <button class="delete" data-delete-task="${esc(task.id)}">Supprimer</button>
+        </div>`;
+
+      if (taskView === "room") {
+        const rooms = [...new Set(filtered.map(task => task.room))];
+        container.innerHTML = rooms.map(room => `
+          <div class="card">
+            <h3>${esc(room)}</h3>
+            ${filtered.filter(task => task.room === room).map(renderTask).join("")}
+          </div>
+        `).join("");
+      } else {
+        container.innerHTML = `<div class="card">${filtered.map(renderTask).join("")}</div>`;
+      }
+
+      container.querySelectorAll("[data-toggle-task]").forEach(box => {
+        box.addEventListener("change", () => {
+          const task = tasks.find(item => item.id === box.dataset.toggleTask);
+          if (task) task.done = box.checked;
+          save();
+          renderTasks();
+        });
+      });
+
+      container.querySelectorAll("[data-delete-task]").forEach(button => {
+        button.addEventListener("click", () => {
+          tasks = tasks.filter(task => task.id !== button.dataset.deleteTask);
+          save();
+          renderTasks();
+        });
+      });
+    }
+
+    document.getElementById("roomFilter").addEventListener("change", renderTasks);
+    document.getElementById("statusFilter").addEventListener("change", renderTasks);
+
+    document.getElementById("roomView").addEventListener("click", () => {
+      taskView = "room";
+      renderTasks();
+    });
+
+    document.getElementById("listView").addEventListener("click", () => {
+      taskView = "list";
+      renderTasks();
+    });
+
+    document.getElementById("clearChecks").addEventListener("click", () => {
+      checked = {};
+      save();
+      renderShopping();
+    });
+
+    document.querySelectorAll(".tab").forEach(button => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(tab => {
+          tab.classList.remove("active");
+          tab.classList.add("secondary");
+        });
+
+        button.classList.add("active");
+        button.classList.remove("secondary");
+
+        document.querySelectorAll("main > section").forEach(section => {
+          section.classList.add("hidden");
+        });
+
+        document.getElementById(button.dataset.tab).classList.remove("hidden");
+      });
+    });
+
+    function renderAll() {
+      renderMeals();
+      renderShopping();
+      renderRecipes();
+      renderTasks();
+    }
+
+    renderAll();
+  </script>
+</body>
+</html>
